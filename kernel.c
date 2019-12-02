@@ -62,18 +62,19 @@ void printChar(char character){
 void printString(char* chars){
 	int i;
 	int l;
-    for(i=0; chars[i]!='\0'; i++);{
-		for(l=0; l<i; l++){
-			printChar(chars[l]);
-			//interrupt(0x10, 0xe*256+chars[l], 0, 0, 0);
-			}
+    for(i=0; chars[i]!='\0'; i++){
+		// for(l=0; l<i; l++){
+			// printChar(chars[l]);
+			// //interrupt(0x10, 0xe*256+chars[l], 0, 0, 0);
+		// }
+		printChar(chars[i]);
 	}
 }
 
 void readString(char* chars){
 	char read=0;
 	int i;
-	for(i=0; i<80; i++){chars[i]=' ';}
+	//for(i=0; i<512; i++){chars[i]=' ';}
 	i=0;
 	while(read != 0xd){
 		read=0;
@@ -122,7 +123,7 @@ void readSector(char* buffer, int sector){
 	interrupt(0x13, ah*256+al, buffer, ch*256+cl, dh*256+dl); //what does interrupt 0x13 do?
 }
 
-void readFile(char* filename,char* buffer, int* sector){
+void readFile(char* filename, char* buffer, int* sector){
 	char dir[512];
 	int fileEntry;
 	int i;
@@ -130,11 +131,13 @@ void readFile(char* filename,char* buffer, int* sector){
 	int fileFound = 0;
 	int sectorNumber;
 	int bufferAddress;
+	//int matchLoop = 0;
 	*sector = 0;
 	readSector(dir,2);
 	for(fileEntry=0; fileEntry<512; fileEntry+=32){	//loops through possible file locations in sector
 		//printChar(filename[fileEntry/32]);
 		match = 1;
+		//matchLoop = 0;
 		//printString("looped no?\r\n");
 		for(i=0;i<6;i++){
 			//printString("looped\r\n");
@@ -145,6 +148,14 @@ void readFile(char* filename,char* buffer, int* sector){
 				match = 0;
 				break;
 			}
+			// if(filename[i]==dir[fileEntry+i]){
+				// matchLoop++;
+			// }
+			// if(matchloop!=0){
+			// printchar(matchloop+'0');
+			// printchar('\r');
+			// printchar('\n');
+			// }
 		}
 		if(match==1){
 			//printString("looped found\r\n");
@@ -153,6 +164,9 @@ void readFile(char* filename,char* buffer, int* sector){
 			//printChar('0');
 			//printChar('\r');
 			//printChar('\n');
+			for(fileFound=0;fileFound<13312;fileFound++){
+				buffer[fileFound]='\0';
+			}
 			for(fileFound=0;fileFound<26;fileFound++){
 				//printChar(fileFound+'0');
 				//printChar('\r');
@@ -160,7 +174,9 @@ void readFile(char* filename,char* buffer, int* sector){
 				//printString("looped found 1\r\n");
 				sectorNumber = dir[fileEntry+6+fileFound];
 				//printChar(filename[fileFound]);
-				//printChar(sectorNumber+'0');
+				// printChar(*sector+'0');
+				// printChar('\r');
+				// printChar('\n');
 				bufferAddress = buffer+fileFound*512;
 				if(sectorNumber!=0){
 					//printString("\r\nlooped found 2\r\n");
@@ -292,36 +308,22 @@ void writeFile(char* buffer, char* filename, int numberOfSectors){
 					dir[fileEntry+i]=filename[i];
 				}
 			}
-			for(sector=3;sector<32;sector++){ //kernel starts at 3
-				if(map[sector]==0){
-					map[sector]=255;
-					break;
-				}
-			}
-			for(i=0;i<numberOfSectors+1;i++){
-				for(j=6;j<26;j++){		//starts after the file name
-					if(dir[fileEntry+j]==0){
-						dir[fileEntry+j]=sector;
+			j=6;
+			for(i=0;i<numberOfSectors;i++){
+				for(sector=3;sector<512;sector++){ //kernel starts at 3, finds the first open sector
+					if(map[sector]==0){
+						map[sector]=255;
 						break;
 					}
 				}
-				bufferAddress=buffer+i*512;
+				dir[fileEntry+j] = sector;
+				bufferAddress=buffer+(i*512);
 				writeSector(bufferAddress,sector);
 				sector++;
-				if(map[sector]==255){
-					for(j=sector;j<32;j++){
-						if(map[j]==0){
-							sector = j;
-							break;
-						}
-					}
-				}
-				map[sector]=255;
-				if(i==numberOfSectors){
-					for(j=6+i;j<26-i;j++){
-						dir[fileEntry+j]='\0';
-					}
-				}
+				j++;
+			}
+			for(j=j+1;j<32;j++){
+				dir[fileEntry+j]=0;
 			}
 			writeSector(map,1);
 			writeSector(dir,2);
