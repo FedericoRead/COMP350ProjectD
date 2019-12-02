@@ -11,5 +11,3 @@ pressing enter after you are satified with what is entered on the previous instr
 what is repeated will be the same as what you entered
 it will print out it is going to read from a sector on the drive
 after your input is repeated it will read from a sector on the disk then print out what was read from that sector
-
-Warning: the "copy" and "create textfl" commands do not work 100%.
